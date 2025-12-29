@@ -12,7 +12,6 @@ import {
   createSCurvePath,
   randomChoice,
   randomBetween,
-  calculatePathLength,
 } from '@/utils/mathHelpers';
 
 // ============================================
@@ -145,7 +144,7 @@ export function generateTrack(params: TrackGeneratorParams): {
 // Choose segment type based on position in track
 function chooseSegmentType(
   index: number,
-  total: number
+  _total: number
 ): TrackSegment['type'] {
   const types: TrackSegment['type'][] = [
     'straight',

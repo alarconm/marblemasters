@@ -1,4 +1,4 @@
-import { Challenge, MarbleColor, Subject } from '@/types';
+import { Challenge, Subject } from '@/types';
 
 // ============================================
 // CHALLENGE DATA BY SUBJECT AND AGE

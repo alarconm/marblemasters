@@ -5,7 +5,6 @@ export function GameHUD() {
   const {
     currentLevel,
     score,
-    marblesDropped,
     marblesCollected,
     marblesRequired,
     isPaused,

@@ -8,10 +8,9 @@ import {
   Challenge,
   ChallengeResult,
   Subject,
-  MARBLE_COLORS,
 } from '@/types';
 import { createMarble, dropMarble } from '@/systems/physics';
-import { randomChoice, shuffleArray } from '@/utils/mathHelpers';
+import { randomChoice } from '@/utils/mathHelpers';
 import { selectChallenge, shuffleChallengeOptions } from '@/systems/educationEngine';
 
 // Default enabled subjects

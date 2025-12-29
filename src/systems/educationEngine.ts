@@ -1,5 +1,5 @@
-import { Challenge, Subject, ChallengeResult, PlayerProfile } from '@/types';
-import { getChallengesForAge, allChallenges } from '@/data/challenges';
+import { Challenge, Subject, ChallengeResult } from '@/types';
+import { getChallengesForAge } from '@/data/challenges';
 import { randomChoice, shuffleArray } from '@/utils/mathHelpers';
 
 // ============================================
