@@ -28,5 +28,14 @@ npm-debug.log*
 # PWA dev
 dev-dist/
 
+# Vercel
+.vercel
+
+# iOS build artifacts
+ios/
+
+# Generated icons
+ios-icons/
+
 # Misc
 nul

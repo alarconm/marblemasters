@@ -31,7 +31,8 @@ export function generateTrack(params: TrackGeneratorParams): {
   buckets: Bucket[];
   launcherPosition: Vector2;
 } {
-  const { theme, screenWidth, screenHeight, difficulty } = params;
+  const { theme, screenWidth, screenHeight } = params;
+  // difficulty is available for future use: params.difficulty
   const centerX = screenWidth / 2;
   const trackWidth = PHYSICS.TRACK_WIDTH;
 
@@ -43,25 +44,32 @@ export function generateTrack(params: TrackGeneratorParams): {
   // Launcher position
   const launcherPosition: Vector2 = { x: centerX, y: 60 };
 
-  // Generate 3-6 track segments based on difficulty
-  const segmentCount = 3 + Math.min(Math.floor(difficulty / 2), 3);
+  // Define left and right edges for zigzag pattern
+  const leftEdge = screenWidth * 0.25;  // 25% from left
+  const rightEdge = screenWidth * 0.75; // 75% from left
+
+  // Generate 3 track segments for a good zigzag pattern
+  const segmentCount = 3;
 
   for (let i = 0; i < segmentCount; i++) {
-    const segmentHeight = randomBetween(100, 180);
+    // Segment height - taller segments for more dramatic curves
+    const segmentHeight = randomBetween(100, 140);
     const nextY = currentY + segmentHeight;
 
-    // Create zigzag pattern - alternate left and right
-    const direction = i % 2 === 0 ? 1 : -1;
-    const minOffset = 60; // Minimum horizontal movement
-    const maxOffset = Math.min(150, (screenWidth / 2) - 100);
-    const offset = randomBetween(minOffset, maxOffset) * direction;
+    // Alternate between left and right edges for true zigzag
+    // Even segments go RIGHT, odd segments go LEFT
+    let nextX: number;
+    if (i % 2 === 0) {
+      // Go to right side
+      nextX = randomBetween(rightEdge - 50, rightEdge);
+    } else {
+      // Go to left side
+      nextX = randomBetween(leftEdge, leftEdge + 50);
+    }
 
-    let nextX = currentX + offset;
-    // Keep within screen bounds with padding
-    nextX = Math.max(100, Math.min(screenWidth - 100, nextX));
-
-    // Choose segment type based on direction
-    const segmentType = chooseSegmentType(i, segmentCount, offset);
+    // Choose segment type based on direction (positive = going right, negative = going left)
+    const horizontalDirection = nextX - currentX;
+    const segmentType = chooseSegmentType(i, segmentCount, horizontalDirection);
 
     // Create the segment
     const entry: Vector2 = { x: currentX, y: currentY };
@@ -147,16 +155,12 @@ export function generateTrack(params: TrackGeneratorParams): {
 
 // Choose segment type based on position and direction
 function chooseSegmentType(
-  index: number,
+  _index: number,
   _total: number,
   offset: number
 ): TrackSegment['type'] {
-  // First segment is always straight for easy entry
-  if (index === 0) {
-    return 'straight';
-  }
-
   // Choose curve direction based on horizontal movement
+  // All segments curve now for more interesting tracks
   if (offset > 0) {
     return 'curve-right';
   } else if (offset < 0) {
@@ -177,10 +181,10 @@ function createSegmentPath(
       return createStraightPath(entry, exit);
 
     case 'curve-left':
-      return createCurvedPath(entry, exit, 'left', 0.5);
+      return createCurvedPath(entry, exit, 'left', 0.3);
 
     case 'curve-right':
-      return createCurvedPath(entry, exit, 'right', 0.5);
+      return createCurvedPath(entry, exit, 'right', 0.3);
 
     case 'spiral':
     case 'funnel':

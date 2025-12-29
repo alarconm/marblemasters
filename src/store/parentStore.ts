@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Subject, ChallengeResult } from '@/types';
+import { Subject, ChallengeResult, EarnedBadge, LevelStars, MarbleSkin } from '@/types';
 
 // ============================================
 // PARENT STORE
@@ -50,6 +50,19 @@ interface ParentStore {
   totalPlayTime: number; // minutes
   currentSessionStart: number | null;
 
+  // Achievement Data
+  earnedBadges: EarnedBadge[];
+  levelStars: LevelStars[];
+  totalMarblesCollected: number;
+  currentCorrectStreak: number;
+  maxCorrectStreak: number;
+  currentDayStreak: number;
+  lastPlayedDate: string | null; // YYYY-MM-DD
+  hadPerfectLevel: boolean;
+  unlockedThemes: string[];
+  unlockedSkins: MarbleSkin[];
+  selectedSkin: MarbleSkin;
+
   // Actions
   setPin: (pin: string) => void;
   verifyPin: (pin: string) => boolean;
@@ -67,6 +80,17 @@ interface ParentStore {
   startSession: () => void;
   endSession: (challengesCompleted: number, correctAnswers: number, levelsCompleted: number) => void;
   resetProgress: () => void;
+
+  // Achievement Actions
+  earnBadge: (badgeId: string) => void;
+  setLevelStars: (level: number, stars: 1 | 2 | 3, perfectRun: boolean, challengeCorrect: boolean) => void;
+  addMarblesCollected: (count: number) => void;
+  updateStreak: (correct: boolean) => void;
+  updateDayStreak: () => void;
+  setPerfectLevel: () => void;
+  unlockTheme: (themeId: string) => void;
+  unlockSkin: (skin: MarbleSkin) => void;
+  setSelectedSkin: (skin: MarbleSkin) => void;
 }
 
 const defaultSubjects: Record<Subject, boolean> = {
@@ -110,6 +134,19 @@ export const useParentStore = create<ParentStore>()(
       sessionHistory: [],
       totalPlayTime: 0,
       currentSessionStart: null,
+
+      // Achievement initial state
+      earnedBadges: [],
+      levelStars: [],
+      totalMarblesCollected: 0,
+      currentCorrectStreak: 0,
+      maxCorrectStreak: 0,
+      currentDayStreak: 0,
+      lastPlayedDate: null,
+      hadPerfectLevel: false,
+      unlockedThemes: [],
+      unlockedSkins: ['classic'],
+      selectedSkin: 'classic',
 
       // Actions
       setPin: (pin) => set({ pin, isPinSet: true }),
@@ -210,7 +247,123 @@ export const useParentStore = create<ParentStore>()(
           recentChallenges: [],
           sessionHistory: [],
           totalPlayTime: 0,
+          earnedBadges: [],
+          levelStars: [],
+          totalMarblesCollected: 0,
+          currentCorrectStreak: 0,
+          maxCorrectStreak: 0,
+          currentDayStreak: 0,
+          hadPerfectLevel: false,
         }),
+
+      // Achievement Actions
+      earnBadge: (badgeId) => {
+        const state = get();
+        // Don't earn same badge twice
+        if (state.earnedBadges.some((eb) => eb.badgeId === badgeId)) return;
+
+        set({
+          earnedBadges: [
+            ...state.earnedBadges,
+            { badgeId, earnedAt: Date.now() },
+          ],
+        });
+      },
+
+      setLevelStars: (level, stars, perfectRun, challengeCorrect) => {
+        const state = get();
+        const existing = state.levelStars.find((ls) => ls.level === level);
+
+        if (existing) {
+          // Only update if new stars are higher
+          if (stars > existing.stars) {
+            set({
+              levelStars: state.levelStars.map((ls) =>
+                ls.level === level
+                  ? { level, stars, perfectRun, challengeCorrect }
+                  : ls
+              ),
+            });
+          }
+        } else {
+          set({
+            levelStars: [
+              ...state.levelStars,
+              { level, stars, perfectRun, challengeCorrect },
+            ],
+          });
+        }
+      },
+
+      addMarblesCollected: (count) => {
+        set((state) => ({
+          totalMarblesCollected: state.totalMarblesCollected + count,
+        }));
+      },
+
+      updateStreak: (correct) => {
+        const state = get();
+        if (correct) {
+          const newStreak = state.currentCorrectStreak + 1;
+          set({
+            currentCorrectStreak: newStreak,
+            maxCorrectStreak: Math.max(newStreak, state.maxCorrectStreak),
+          });
+        } else {
+          set({ currentCorrectStreak: 0 });
+        }
+      },
+
+      updateDayStreak: () => {
+        const state = get();
+        const today = new Date().toISOString().split('T')[0];
+
+        if (!state.lastPlayedDate) {
+          // First time playing
+          set({ currentDayStreak: 1, lastPlayedDate: today });
+          return;
+        }
+
+        const lastDate = new Date(state.lastPlayedDate);
+        const todayDate = new Date(today);
+        const diffDays = Math.floor(
+          (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (diffDays === 0) {
+          // Same day, no change
+          return;
+        } else if (diffDays === 1) {
+          // Consecutive day
+          set({
+            currentDayStreak: state.currentDayStreak + 1,
+            lastPlayedDate: today,
+          });
+        } else {
+          // Streak broken
+          set({ currentDayStreak: 1, lastPlayedDate: today });
+        }
+      },
+
+      setPerfectLevel: () => {
+        set({ hadPerfectLevel: true });
+      },
+
+      unlockTheme: (themeId) => {
+        const state = get();
+        if (state.unlockedThemes.includes(themeId)) return;
+        set({ unlockedThemes: [...state.unlockedThemes, themeId] });
+      },
+
+      unlockSkin: (skin) => {
+        const state = get();
+        if (state.unlockedSkins.includes(skin)) return;
+        set({ unlockedSkins: [...state.unlockedSkins, skin] });
+      },
+
+      setSelectedSkin: (skin) => {
+        set({ selectedSkin: skin });
+      },
     }),
     {
       name: 'marble-masters-parent',

@@ -54,7 +54,10 @@ export function updateMarble(
         updated.state = 'on-track';
         updated.currentTrackSegment = landedSegment.id;
         updated.trackProgress = 0;
-        updated.speed = Math.abs(updated.velocity.y) * 0.8; // Convert vertical velocity
+        updated.speed = Math.max(PHYSICS.MIN_SPEED, Math.abs(updated.velocity.y) * 0.8);
+        // Immediately snap to track position
+        const entryPoint = getPointOnPath(landedSegment.path, 0);
+        updated.position = { ...entryPoint };
       }
 
       // Check if marble went off screen (missed track)
@@ -71,15 +74,20 @@ export function updateMarble(
         break;
       }
 
+      // Ensure path has valid length
+      if (!segment.path.length || segment.path.length < 10) {
+        // Invalid path, skip to end
+        updated.trackProgress = 1;
+        break;
+      }
+
       // Get path geometry at current position
-      const pathPoint = getPointOnPath(segment.path, updated.trackProgress);
       const pathTangent = getTangentOnPath(segment.path, updated.trackProgress);
 
       // Calculate slope angle for gravity component
       const slopeAngle = vectorAngle(pathTangent);
 
       // Gravity component along track direction (positive when going downhill)
-      // sin(angle) gives the component of gravity along the slope
       const gravityForce = PHYSICS.GRAVITY * Math.sin(slopeAngle);
 
       // Friction opposes motion
@@ -95,12 +103,16 @@ export function updateMarble(
         PHYSICS.MAX_SPEED
       );
 
-      // Update track progress (convert linear distance to t parameter)
-      const distanceTraveled = updated.speed * deltaTime;
-      const progressDelta = distanceTraveled / segment.path.length;
-      updated.trackProgress += progressDelta;
+      // Update track progress - faster for kids game (~5 seconds total track time)
+      const SEGMENT_TIME = 0.15; // seconds to complete one segment
+      const progressDelta = deltaTime / SEGMENT_TIME;
+      updated.trackProgress = Math.min(1, updated.trackProgress + progressDelta);
 
-      // Update visual position (constrained to track)
+      // Update speed based on progress for visual consistency
+      updated.speed = PHYSICS.MIN_SPEED + (PHYSICS.MAX_SPEED - PHYSICS.MIN_SPEED) * 0.5;
+
+      // Update visual position to CURRENT progress (after update)
+      const pathPoint = getPointOnPath(segment.path, updated.trackProgress);
       updated.position = { ...pathPoint };
 
       // Update velocity direction (for visual effects and transitions)
@@ -149,23 +161,28 @@ export function updateMarble(
         updated.velocity.x ** 2 + updated.velocity.y ** 2
       );
 
-      // Check for landing on track
-      const nextSegment = checkTrackCollision(updated, track);
-      if (nextSegment) {
-        updated.state = 'on-track';
-        updated.currentTrackSegment = nextSegment.id;
-        updated.trackProgress = 0;
-      }
-
-      // Check for bucket collection
+      // Check for bucket collection FIRST (priority over track landing)
       const hitBucket = checkBucketCollision(updated, buckets);
       if (hitBucket) {
         updated.state = 'collected';
+        break;
       }
 
       // Check if fell off screen
       if (updated.position.y > 1200) {
         updated.state = 'collected';
+        break;
+      }
+
+      // Only check for track landing if moving downward significantly
+      // This prevents re-collision with segments we just left
+      if (updated.velocity.y > 50) {
+        const nextSegment = checkTrackCollisionBelow(updated, track);
+        if (nextSegment) {
+          updated.state = 'on-track';
+          updated.currentTrackSegment = nextSegment.id;
+          updated.trackProgress = 0;
+        }
       }
       break;
 
@@ -177,7 +194,7 @@ export function updateMarble(
   return updated;
 }
 
-// Check if marble collides with any track segment
+// Check if marble collides with any track segment (for falling state - first landing)
 function checkTrackCollision(
   marble: Marble,
   track: TrackSegment[]
@@ -186,26 +203,36 @@ function checkTrackCollision(
   const sortedSegments = [...track].sort((a, b) => a.entryPoint.y - b.entryPoint.y);
 
   for (const segment of sortedSegments) {
-    // Expanded collision detection for entry point
+    // Only check the first segment (top of track) for initial landing
     const entryDist = distanceBetween(marble.position, segment.entryPoint);
     const collisionRadius = segment.width / 2 + PHYSICS.MARBLE_RADIUS * 2;
 
-    // Check if marble is near the track entry point (generous detection)
+    // Check if marble is near the track entry point
     if (entryDist < collisionRadius) {
-      // Check if marble is moving downward and below or at the entry
       if (marble.velocity.y > 0 && marble.position.y >= segment.entryPoint.y - PHYSICS.MARBLE_RADIUS * 2) {
         return segment;
       }
     }
+  }
+  return null;
+}
 
-    // Check if marble intersects with the track path (more samples for accuracy)
-    for (let t = 0; t <= 1; t += 0.05) {
-      const pathPoint = getPointOnPath(segment.path, t);
-      const dist = distanceBetween(marble.position, pathPoint);
-      // More generous collision detection
-      if (dist < segment.width / 2 + PHYSICS.MARBLE_RADIUS) {
-        return segment;
-      }
+// Check if marble collides with track segments BELOW its current position (for airborne state)
+function checkTrackCollisionBelow(
+  marble: Marble,
+  track: TrackSegment[]
+): TrackSegment | null {
+  // Only check segments whose entry point is below the marble
+  const belowSegments = track.filter(
+    (s) => s.entryPoint.y > marble.position.y - PHYSICS.MARBLE_RADIUS
+  );
+
+  for (const segment of belowSegments) {
+    const entryDist = distanceBetween(marble.position, segment.entryPoint);
+    const collisionRadius = segment.width / 2 + PHYSICS.MARBLE_RADIUS;
+
+    if (entryDist < collisionRadius && marble.velocity.y > 0) {
+      return segment;
     }
   }
   return null;
@@ -269,6 +296,6 @@ export function dropMarble(marble: Marble): Marble {
   return {
     ...marble,
     state: 'falling',
-    velocity: createVector(0, 50), // Initial downward velocity
+    velocity: createVector(0, 800), // Initial downward velocity
   };
 }

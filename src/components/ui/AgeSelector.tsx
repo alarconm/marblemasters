@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useAccessibility, useArrowNavigation } from '@/hooks/useAccessibility';
 
 interface AgeSelectorProps {
   onSelectAge: (age: number) => void;
@@ -18,22 +20,32 @@ const ageColors = [
 ];
 
 export function AgeSelector({ onSelectAge }: AgeSelectorProps) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const { reducedMotion } = useAccessibility();
+  const handleArrowNav = useArrowNavigation(gridRef, 4); // 4 columns
+
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-purple-600 to-blue-500 p-6">
+    <main
+      className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-purple-600 to-blue-500 p-6"
+      role="main"
+      aria-label="Age selection screen"
+    >
       {/* Title */}
       <motion.div
         className="text-center mb-8"
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', damping: 15 }}
+        initial={reducedMotion ? { opacity: 0 } : { y: -50, opacity: 0 }}
+        animate={reducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+        transition={reducedMotion ? { duration: 0.15 } : { type: 'spring', damping: 15 }}
       >
         <h1
+          id="age-title"
           className="text-5xl md:text-6xl font-bold text-white mb-2"
           style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.3)' }}
         >
           Marble Masters
         </h1>
         <p
+          id="age-prompt"
           className="text-xl text-white/90"
           style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}
         >
@@ -43,15 +55,19 @@ export function AgeSelector({ onSelectAge }: AgeSelectorProps) {
 
       {/* Age buttons grid */}
       <motion.div
+        ref={gridRef}
         className="grid grid-cols-4 gap-3 md:gap-4 max-w-md"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, type: 'spring', damping: 15 }}
+        initial={reducedMotion ? { opacity: 0 } : { scale: 0.8, opacity: 0 }}
+        animate={reducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+        transition={reducedMotion ? { duration: 0.15 } : { delay: 0.2, type: 'spring', damping: 15 }}
+        role="group"
+        aria-labelledby="age-prompt"
+        onKeyDown={handleArrowNav}
       >
         {ages.map((age, index) => (
           <motion.button
             key={age}
-            className="touch-target rounded-2xl font-bold text-white text-3xl md:text-4xl shadow-lg"
+            className="touch-target rounded-2xl font-bold text-white text-3xl md:text-4xl shadow-lg focus:outline-none focus:ring-4 focus:ring-yellow-400"
             style={{
               background: `linear-gradient(135deg, ${ageColors[index]} 0%, ${darkenColor(ageColors[index], 20)} 100%)`,
               minWidth: 70,
@@ -59,25 +75,26 @@ export function AgeSelector({ onSelectAge }: AgeSelectorProps) {
               textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
               boxShadow: `0 4px 15px ${ageColors[index]}50`,
             }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{
-              delay: 0.3 + index * 0.05,
-              type: 'spring',
-              damping: 12,
-            }}
+            whileHover={reducedMotion ? undefined : { scale: 1.1 }}
+            whileTap={reducedMotion ? undefined : { scale: 0.95 }}
+            initial={reducedMotion ? { opacity: 0 } : { y: 20, opacity: 0 }}
+            animate={reducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+            transition={
+              reducedMotion
+                ? { duration: 0.15 }
+                : { delay: 0.3 + index * 0.05, type: 'spring', damping: 12 }
+            }
             onClick={() => onSelectAge(age)}
+            aria-label={`I am ${age} years old`}
           >
             {age}
           </motion.button>
         ))}
       </motion.div>
 
-      {/* Decorative marbles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(10)].map((_, i) => (
+      {/* Decorative marbles - hidden from screen readers */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        {!reducedMotion && [...Array(10)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute rounded-full"
@@ -101,7 +118,7 @@ export function AgeSelector({ onSelectAge }: AgeSelectorProps) {
           />
         ))}
       </div>
-    </div>
+    </main>
   );
 }
 

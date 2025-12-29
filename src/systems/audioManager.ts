@@ -4,11 +4,30 @@
 // Falls back gracefully if audio not supported
 // ============================================
 
+// Musical notes for background music (pentatonic scale - always sounds pleasant)
+const PENTATONIC_NOTES = [
+  261.63, // C4
+  293.66, // D4
+  329.63, // E4
+  392.0, // G4
+  440.0, // A4
+  523.25, // C5
+  587.33, // D5
+  659.25, // E5
+];
+
 class AudioManager {
   private audioContext: AudioContext | null = null;
   private enabled: boolean = true;
   private musicEnabled: boolean = true;
   private volume: number = 0.5;
+  private musicVolume: number = 0.15;
+
+  // Background music state
+  private musicPlaying: boolean = false;
+  private musicGainNode: GainNode | null = null;
+  private musicInterval: NodeJS.Timeout | null = null;
+  private currentNoteIndex: number = 0;
 
   constructor() {
     this.initAudioContext();
@@ -142,6 +161,116 @@ class AudioManager {
     this.playTone(500, 0.08, 'triangle');
   }
 
+  // ============================================
+  // BACKGROUND MUSIC
+  // Procedurally generated ambient music
+  // ============================================
+
+  startMusic() {
+    if (!this.audioContext || !this.musicEnabled || this.musicPlaying) return;
+
+    this.musicPlaying = true;
+
+    // Create master gain for music
+    this.musicGainNode = this.audioContext.createGain();
+    this.musicGainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+    this.musicGainNode.gain.linearRampToValueAtTime(
+      this.musicVolume,
+      this.audioContext.currentTime + 2
+    );
+    this.musicGainNode.connect(this.audioContext.destination);
+
+    // Start playing notes at intervals
+    this.playMusicNote();
+    this.musicInterval = setInterval(() => {
+      if (this.musicPlaying) {
+        this.playMusicNote();
+      }
+    }, 2000); // Play a note every 2 seconds
+  }
+
+  private playMusicNote() {
+    if (!this.audioContext || !this.musicGainNode || !this.musicEnabled) return;
+
+    // Pick notes in a melodic pattern
+    const patterns = [
+      [0, 2, 4], // C, E, G
+      [1, 3, 5], // D, G, C5
+      [2, 4, 6], // E, A, D5
+      [0, 3, 5], // C, G, C5
+    ];
+
+    const patternIndex = Math.floor(this.currentNoteIndex / 3) % patterns.length;
+    const noteInPattern = this.currentNoteIndex % 3;
+    const noteIndex = patterns[patternIndex][noteInPattern];
+    const frequency = PENTATONIC_NOTES[noteIndex];
+
+    // Create oscillator with smooth envelope
+    const osc = this.audioContext.createOscillator();
+    const noteGain = this.audioContext.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+
+    // Add slight vibrato for warmth
+    const vibrato = this.audioContext.createOscillator();
+    const vibratoGain = this.audioContext.createGain();
+    vibrato.frequency.setValueAtTime(4, this.audioContext.currentTime);
+    vibratoGain.gain.setValueAtTime(2, this.audioContext.currentTime);
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(osc.frequency);
+
+    osc.connect(noteGain);
+    noteGain.connect(this.musicGainNode);
+
+    // Soft envelope
+    const now = this.audioContext.currentTime;
+    noteGain.gain.setValueAtTime(0, now);
+    noteGain.gain.linearRampToValueAtTime(0.3, now + 0.1);
+    noteGain.gain.exponentialRampToValueAtTime(0.01, now + 1.8);
+
+    osc.start(now);
+    vibrato.start(now);
+    osc.stop(now + 2);
+    vibrato.stop(now + 2);
+
+    this.currentNoteIndex++;
+  }
+
+  stopMusic() {
+    if (!this.musicPlaying) return;
+
+    this.musicPlaying = false;
+
+    // Fade out
+    if (this.musicGainNode && this.audioContext) {
+      this.musicGainNode.gain.linearRampToValueAtTime(
+        0,
+        this.audioContext.currentTime + 1
+      );
+    }
+
+    // Clear interval
+    if (this.musicInterval) {
+      clearInterval(this.musicInterval);
+      this.musicInterval = null;
+    }
+  }
+
+  isMusicPlaying(): boolean {
+    return this.musicPlaying;
+  }
+
+  setMusicVolume(volume: number) {
+    this.musicVolume = Math.max(0, Math.min(0.3, volume)); // Cap at 0.3 for background
+    if (this.musicGainNode && this.audioContext) {
+      this.musicGainNode.gain.linearRampToValueAtTime(
+        this.musicVolume,
+        this.audioContext.currentTime + 0.1
+      );
+    }
+  }
+
   // SETTINGS
 
   setEnabled(enabled: boolean) {
@@ -154,6 +283,11 @@ class AudioManager {
 
   setMusicEnabled(enabled: boolean) {
     this.musicEnabled = enabled;
+    if (enabled && !this.musicPlaying) {
+      this.startMusic();
+    } else if (!enabled && this.musicPlaying) {
+      this.stopMusic();
+    }
   }
 
   isMusicEnabled(): boolean {

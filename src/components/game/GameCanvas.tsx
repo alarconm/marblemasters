@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useGameLoop } from '@/hooks/useGameLoop';
@@ -8,6 +8,7 @@ import { Marble } from './Marble';
 import { Track } from './Track';
 import { Bucket } from './Bucket';
 import { Launcher } from './Launcher';
+import { ScorePopups } from '@/components/ui/ScorePopup';
 
 export function GameCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,18 +68,42 @@ export function GameCanvas() {
   const colors = THEME_COLORS[theme];
   const canDrop = marblesDropped < marblesRequired && !isPaused;
 
+  // Handle keyboard shortcuts at game level
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape' && !isPaused) {
+        // Pause on Escape
+        e.preventDefault();
+      }
+    },
+    [isPaused]
+  );
+
   return (
     <div
       ref={containerRef}
+      id="game-canvas"
       className="relative w-full h-full overflow-hidden"
       style={{
         background: colors.background,
       }}
+      role="application"
+      aria-label="Marble Masters game area"
+      aria-describedby="game-instructions"
+      onKeyDown={handleKeyDown}
     >
+      {/* Screen reader instructions */}
+      <span id="game-instructions" className="sr-only">
+        Drop marbles to collect them in buckets. Use the launcher button to drop marbles.
+        Current progress: {marbles.filter(m => m.state === 'collected').length} marbles collected.
+      </span>
+
       {/* SVG layer for track */}
       <svg
         className="absolute inset-0 w-full h-full"
         style={{ pointerEvents: 'none' }}
+        role="img"
+        aria-label={`Marble track with ${track.length} segments`}
       >
         {track.map((segment) => (
           <Track key={segment.id} segment={segment} />
@@ -106,12 +131,10 @@ export function GameCanvas() {
         <Bucket key={bucket.id} bucket={bucket} />
       ))}
 
-      {/* Touch area for dropping marbles (covers whole screen) */}
-      <div
-        className="absolute inset-0"
-        style={{ pointerEvents: canDrop ? 'auto' : 'none' }}
-        onClick={canDrop ? dropNextMarble : undefined}
-      />
+      {/* Score Popups */}
+      <ScorePopups />
+
+      {/* Touch area removed - use launcher only */}
     </div>
   );
 }

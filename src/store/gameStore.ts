@@ -11,6 +11,8 @@ import {
 } from '@/types';
 import { createMarble, dropMarble } from '@/systems/physics';
 import { randomChoice } from '@/utils/mathHelpers';
+import { audioManager } from '@/systems/audioManager';
+import { haptics } from '@/systems/haptics';
 import { selectChallenge, shuffleChallengeOptions } from '@/systems/educationEngine';
 import { useParentStore } from './parentStore';
 import { recordProgress } from '@/systems/progressTracker';
@@ -27,6 +29,14 @@ const defaultEnabledSubjects: Record<Subject, boolean> = {
   memory: true,
 };
 
+interface ScorePopup {
+  id: string;
+  x: number;
+  y: number;
+  points: number;
+  timestamp: number;
+}
+
 interface GameStore {
   // Game state
   currentLevel: number;
@@ -34,11 +44,13 @@ interface GameStore {
   marblesDropped: number;
   marblesCollected: number;
   marblesRequired: number;
+  totalMarblesCollected: number;
 
   // Entities
   marbles: Marble[];
   track: TrackSegment[];
   buckets: Bucket[];
+  scorePopups: ScorePopup[];
 
   // Visual
   theme: TrackTheme;
@@ -50,12 +62,17 @@ interface GameStore {
   showCelebration: boolean;
   showChallenge: boolean;
   showAgeSelector: boolean;
+  showLevelTransition: boolean;
   playerAge: number;
 
   // Challenge state
   currentChallenge: Challenge | null;
   recentChallenges: ChallengeResult[];
   enabledSubjects: Record<Subject, boolean>;
+
+  // Level performance tracking (for star ratings)
+  challengeAnsweredCorrectly: boolean;
+  hadWrongAnswer: boolean;
 
   // Marble queue
   nextMarbleColors: MarbleColor[];
@@ -75,6 +92,8 @@ interface GameStore {
   pauseGame: () => void;
   resumeGame: () => void;
   resetGame: () => void;
+  removeScorePopup: (id: string) => void;
+  completeLevelTransition: () => void;
 }
 
 const MARBLE_COLOR_LIST: MarbleColor[] = [
@@ -96,9 +115,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   marblesDropped: 0,
   marblesCollected: 0,
   marblesRequired: 5,
+  totalMarblesCollected: 0,
   marbles: [],
   track: [],
   buckets: [],
+  scorePopups: [],
   theme: 'wooden-classic',
   launcherPosition: { x: 200, y: 80 },
   isPlaying: false,
@@ -106,10 +127,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   showCelebration: false,
   showChallenge: false,
   showAgeSelector: true,
+  showLevelTransition: false,
   playerAge: 5,
   currentChallenge: null,
   recentChallenges: [],
   enabledSubjects: { ...defaultEnabledSubjects },
+  challengeAnsweredCorrectly: false,
+  hadWrongAnswer: false,
   nextMarbleColors: generateMarbleQueue(10),
 
   // Actions
@@ -158,6 +182,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Drop the marble immediately
     const droppedMarble = dropMarble(newMarble);
 
+    // Haptic feedback for drop
+    haptics.tap();
+
     set({
       marbles: [...state.marbles, droppedMarble],
       marblesDropped: state.marblesDropped + 1,
@@ -178,7 +205,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
         !state.marbles.find((om) => om.id === m.id && om.state === 'collected')
     );
 
+    // Play collect sound and haptic for each newly collected marble
+    if (newlyCollected.length > 0) {
+      audioManager.playCollect();
+      haptics.collect();
+
+      // Track total marbles collected in parent store for achievements
+      const parentStore = useParentStore.getState();
+      parentStore.addMarblesCollected(newlyCollected.length);
+    }
+
+    // Create score popups for collected marbles
+    const newPopups: ScorePopup[] = newlyCollected.map((m) => ({
+      id: `popup-${m.id}-${Date.now()}`,
+      x: m.position.x,
+      y: m.position.y,
+      points: 100,
+      timestamp: Date.now(),
+    }));
+
     const newCollectedCount = state.marblesCollected + newlyCollected.length;
+    const newTotalCollected = state.totalMarblesCollected + newlyCollected.length;
     const newScore = state.score + newlyCollected.length * 100;
 
     // Remove collected marbles from the active list
@@ -187,7 +234,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       marbles: activeMarbles,
       marblesCollected: newCollectedCount,
+      totalMarblesCollected: newTotalCollected,
       score: newScore,
+      scorePopups: [...state.scorePopups, ...newPopups],
     });
 
     // Check for level completion
@@ -257,6 +306,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Record to parent store for persistent tracking
     recordProgress(result);
 
+    // Update streak in parent store
+    const parentStore = useParentStore.getState();
+    parentStore.updateStreak(correct);
+
     // Calculate bonus points with streak multiplier
     const streakMultiplier = correct ? getStreakMultiplier() : 1;
     const baseBonus = correct ? 50 * state.currentChallenge.difficulty : 0;
@@ -265,6 +318,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       recentChallenges: [...state.recentChallenges.slice(-19), result],
       score: state.score + bonusPoints,
+      // Track for star rating
+      challengeAnsweredCorrectly: correct ? true : state.challengeAnsweredCorrectly,
+      hadWrongAnswer: !correct ? true : state.hadWrongAnswer,
     });
 
     // If correct, proceed to next level after a delay
@@ -282,21 +338,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   nextLevel: () => {
     const state = get();
-    const nextThemes: TrackTheme[] = ['wooden-classic', 'rainbow-candy', 'space-station'];
-    const nextTheme = nextThemes[(state.currentLevel) % nextThemes.length];
 
+    // Show level transition first
     set({
       currentLevel: state.currentLevel + 1,
-      marblesDropped: 0,
-      marblesCollected: 0,
-      marblesRequired: Math.min(5 + Math.floor(state.currentLevel / 3), 10),
-      marbles: [],
       showCelebration: false,
       showChallenge: false,
+      showLevelTransition: true,
       currentChallenge: null,
+    });
+  },
+
+  completeLevelTransition: () => {
+    const state = get();
+    const nextThemes: TrackTheme[] = ['wooden-classic', 'rainbow-candy', 'space-station'];
+    const nextTheme = nextThemes[(state.currentLevel - 1) % nextThemes.length];
+
+    // Update day streak in parent store
+    const parentStore = useParentStore.getState();
+    parentStore.updateDayStreak();
+
+    set({
+      marblesDropped: 0,
+      marblesCollected: 0,
+      marblesRequired: Math.min(5 + Math.floor((state.currentLevel - 1) / 3), 10),
+      marbles: [],
+      scorePopups: [],
+      showLevelTransition: false,
       isPaused: false,
       theme: nextTheme,
       nextMarbleColors: generateMarbleQueue(10),
+      // Reset level performance tracking for new level
+      challengeAnsweredCorrectly: false,
+      hadWrongAnswer: false,
     });
   },
 
@@ -322,6 +396,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       marblesCollected: 0,
       marblesRequired: 5,
       marbles: [],
+      scorePopups: [],
       isPlaying: false,
       isPaused: false,
       showCelebration: false,
@@ -330,4 +405,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       nextMarbleColors: generateMarbleQueue(10),
     });
   },
+
+  removeScorePopup: (id) => set((state) => ({
+    scorePopups: state.scorePopups.filter((p) => p.id !== id),
+  })),
 }));

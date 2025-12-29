@@ -155,6 +155,7 @@ export type ChallengeType =
   | 'count-marbles'
   | 'addition'
   | 'subtraction'
+  | 'multiplication'
   | 'pattern-complete'
   | 'letter-match'
   | 'odd-one-out'
@@ -181,6 +182,7 @@ export interface Challenge {
   correctAnswer: string | number;
   showMarbles?: boolean;
   marbleCount?: number;
+  memorySequence?: MarbleColor[];
 }
 
 export interface ChallengeResult {
@@ -240,10 +242,10 @@ export interface ParentSettings {
 // ============================================
 
 export const PHYSICS = {
-  GRAVITY: 600,
-  MIN_SPEED: 30,
-  MAX_SPEED: 500,
-  DEFAULT_FRICTION: 0.02,
+  GRAVITY: 2500,
+  MIN_SPEED: 3000,
+  MAX_SPEED: 5000,
+  DEFAULT_FRICTION: 0.001,
   MARBLE_RADIUS: 18,
   MARBLE_MASS: 1,
   TRACK_WIDTH: 50,
@@ -290,3 +292,88 @@ export const THEME_COLORS: Record<TrackTheme, ThemeColors> = {
     accent: '#F6E05E',
   },
 };
+
+// ============================================
+// ACHIEVEMENT & BADGE TYPES
+// ============================================
+
+export type BadgeCategory =
+  | 'milestone'
+  | 'collection'
+  | 'mastery'
+  | 'streak'
+  | 'special';
+
+export type BadgeRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: BadgeCategory;
+  rarity: BadgeRarity;
+  // Condition to unlock (evaluated by achievement checker)
+  condition: BadgeCondition;
+  // Optional reward for unlocking
+  reward?: {
+    type: 'theme' | 'marble-skin' | 'points';
+    value: string | number;
+  };
+}
+
+export type BadgeCondition =
+  | { type: 'level-reached'; level: number }
+  | { type: 'marbles-collected'; count: number }
+  | { type: 'subject-mastery'; subject: Subject; mastery: number }
+  | { type: 'all-subjects-mastery'; mastery: number }
+  | { type: 'streak-correct'; count: number }
+  | { type: 'streak-days'; count: number }
+  | { type: 'perfect-level' }
+  | { type: 'challenges-completed'; count: number }
+  | { type: 'play-time'; minutes: number }
+  | { type: 'first-challenge-correct' }
+  | { type: 'badge-count'; count: number };
+
+export interface EarnedBadge {
+  badgeId: string;
+  earnedAt: number;
+}
+
+export type StarRating = 0 | 1 | 2 | 3;
+
+export interface LevelStars {
+  level: number;
+  stars: StarRating;
+  perfectRun: boolean;
+  challengeCorrect: boolean;
+}
+
+// ============================================
+// UNLOCKABLE CONTENT TYPES
+// ============================================
+
+export type UnlockableType = 'theme' | 'marble-skin';
+
+export interface Unlockable {
+  id: string;
+  type: UnlockableType;
+  name: string;
+  description: string;
+  preview: string; // Color or image preview
+  // How to unlock
+  unlockCondition:
+    | { type: 'badge'; badgeId: string }
+    | { type: 'badge-count'; count: number }
+    | { type: 'level'; level: number };
+}
+
+export type MarbleSkin =
+  | 'classic'
+  | 'galaxy'
+  | 'rainbow'
+  | 'gold'
+  | 'crystal'
+  | 'lava'
+  | 'ice'
+  | 'neon';

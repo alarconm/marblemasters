@@ -1,6 +1,9 @@
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { MarbleColor, MARBLE_COLORS, PHYSICS, TrackTheme, THEME_COLORS } from '@/types';
 import { audioManager } from '@/systems/audioManager';
+import { announcer } from '@/systems/announcer';
+import { useAccessibility } from '@/hooks/useAccessibility';
 
 interface LauncherProps {
   position: { x: number; y: number };
@@ -19,33 +22,59 @@ export function Launcher({
 }: LauncherProps) {
   const colors = THEME_COLORS[theme];
   const nextColor = nextColors[0];
+  const { reducedMotion } = useAccessibility();
 
-  const handleTap = () => {
+  const handleActivate = useCallback(() => {
     if (!disabled) {
       audioManager.resume(); // Resume audio context on first interaction
       audioManager.playDrop();
+      announcer.announceMarbleDrop(nextColor);
       onDrop();
     }
-  };
+  }, [disabled, nextColor, onDrop]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleActivate();
+      }
+    },
+    [handleActivate]
+  );
+
+  // Accessible label for screen readers
+  const ariaLabel = disabled
+    ? 'Marble launcher disabled'
+    : `Drop ${nextColor} marble. ${nextColors.length - 1} marbles remaining in queue.`;
 
   return (
-    <motion.div
-      className="absolute touch-target cursor-pointer"
+    <motion.button
+      id="launcher"
+      className="absolute touch-target cursor-pointer focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-offset-2 rounded-2xl"
       style={{
         left: position.x - 60,
         top: position.y - 40,
         width: 120,
         height: 80,
+        background: 'transparent',
+        border: 'none',
       }}
-      onTap={handleTap}
-      whileTap={{ scale: 0.95 }}
+      onClick={handleActivate}
+      onKeyDown={handleKeyDown}
+      whileTap={reducedMotion ? undefined : { scale: 0.95 }}
+      aria-label={ariaLabel}
+      aria-disabled={disabled}
+      disabled={disabled}
+      tabIndex={0}
     >
-      {/* Launcher tube */}
+      {/* Launcher tube - decorative */}
       <svg
         width={120}
         height={80}
         viewBox="0 0 120 80"
         className="absolute top-0 left-0"
+        aria-hidden="true"
       >
         {/* Tube shadow */}
         <ellipse
@@ -162,7 +191,7 @@ export function Launcher({
           />
         ))}
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
 
