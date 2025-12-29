@@ -105,8 +105,8 @@ export function GameCanvas() {
         role="img"
         aria-label={`Marble track with ${track.length} segments`}
       >
-        {track.map((segment) => (
-          <Track key={segment.id} segment={segment} />
+        {track.map((segment, index) => (
+          <Track key={segment.id} segment={segment} index={index} />
         ))}
       </svg>
 

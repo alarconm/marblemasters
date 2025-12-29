@@ -242,13 +242,13 @@ export interface ParentSettings {
 // ============================================
 
 export const PHYSICS = {
-  GRAVITY: 2500,
-  MIN_SPEED: 3000,
-  MAX_SPEED: 5000,
-  DEFAULT_FRICTION: 0.001,
-  MARBLE_RADIUS: 18,
+  GRAVITY: 400,          // Gentler gravity for kids
+  MIN_SPEED: 80,         // Slow, watchable marble movement
+  MAX_SPEED: 250,        // Still leisurely at max
+  DEFAULT_FRICTION: 0.02,
+  MARBLE_RADIUS: 16,     // Slightly smaller marbles
   MARBLE_MASS: 1,
-  TRACK_WIDTH: 50,
+  TRACK_WIDTH: 44,       // Track width for visual appeal
 } as const;
 
 // ============================================

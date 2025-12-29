@@ -103,13 +103,17 @@ export function updateMarble(
         PHYSICS.MAX_SPEED
       );
 
-      // Update track progress - faster for kids game (~5 seconds total track time)
-      const SEGMENT_TIME = 0.15; // seconds to complete one segment
+      // Update track progress - slow enough for kids to watch and enjoy
+      // Use path length to determine time (longer paths take longer)
+      const pathLength = segment.path.length || 200;
+      const baseTime = pathLength / 120; // ~120 pixels per second base speed
+      const SEGMENT_TIME = Math.max(1.5, Math.min(4, baseTime)); // 1.5-4 seconds per segment
       const progressDelta = deltaTime / SEGMENT_TIME;
       updated.trackProgress = Math.min(1, updated.trackProgress + progressDelta);
 
-      // Update speed based on progress for visual consistency
-      updated.speed = PHYSICS.MIN_SPEED + (PHYSICS.MAX_SPEED - PHYSICS.MIN_SPEED) * 0.5;
+      // Smooth speed based on slope - faster going down, slower on flats
+      const slopeFactor = Math.max(0.5, Math.min(1.5, 1 + Math.sin(slopeAngle) * 0.5));
+      updated.speed = PHYSICS.MIN_SPEED + (PHYSICS.MAX_SPEED - PHYSICS.MIN_SPEED) * 0.5 * slopeFactor;
 
       // Update visual position to CURRENT progress (after update)
       const pathPoint = getPointOnPath(segment.path, updated.trackProgress);
@@ -296,6 +300,6 @@ export function dropMarble(marble: Marble): Marble {
   return {
     ...marble,
     state: 'falling',
-    velocity: createVector(0, 800), // Initial downward velocity
+    velocity: createVector(0, 150), // Gentle initial drop
   };
 }
