@@ -10,7 +10,6 @@ import {
   createCurvedPath,
   createStraightPath,
   createSCurvePath,
-  randomChoice,
   randomBetween,
 } from '@/utils/mathHelpers';
 
@@ -48,16 +47,21 @@ export function generateTrack(params: TrackGeneratorParams): {
   const segmentCount = 3 + Math.min(Math.floor(difficulty / 2), 3);
 
   for (let i = 0; i < segmentCount; i++) {
-    const segmentHeight = randomBetween(80, 150);
+    const segmentHeight = randomBetween(100, 180);
     const nextY = currentY + segmentHeight;
 
-    // Determine next X position (stay within bounds)
-    const maxOffset = Math.min(100, (screenWidth / 2) - 80);
-    let nextX = currentX + randomBetween(-maxOffset, maxOffset);
-    nextX = Math.max(80, Math.min(screenWidth - 80, nextX));
+    // Create zigzag pattern - alternate left and right
+    const direction = i % 2 === 0 ? 1 : -1;
+    const minOffset = 60; // Minimum horizontal movement
+    const maxOffset = Math.min(150, (screenWidth / 2) - 100);
+    const offset = randomBetween(minOffset, maxOffset) * direction;
 
-    // Choose segment type based on position
-    const segmentType = chooseSegmentType(i, segmentCount);
+    let nextX = currentX + offset;
+    // Keep within screen bounds with padding
+    nextX = Math.max(100, Math.min(screenWidth - 100, nextX));
+
+    // Choose segment type based on direction
+    const segmentType = chooseSegmentType(i, segmentCount, offset);
 
     // Create the segment
     const entry: Vector2 = { x: currentX, y: currentY };
@@ -141,23 +145,25 @@ export function generateTrack(params: TrackGeneratorParams): {
   return { track: segments, buckets, launcherPosition };
 }
 
-// Choose segment type based on position in track
+// Choose segment type based on position and direction
 function chooseSegmentType(
   index: number,
-  _total: number
+  _total: number,
+  offset: number
 ): TrackSegment['type'] {
-  const types: TrackSegment['type'][] = [
-    'straight',
-    'curve-left',
-    'curve-right',
-  ];
-
   // First segment is always straight for easy entry
   if (index === 0) {
     return 'straight';
   }
 
-  return randomChoice(types);
+  // Choose curve direction based on horizontal movement
+  if (offset > 0) {
+    return 'curve-right';
+  } else if (offset < 0) {
+    return 'curve-left';
+  }
+
+  return 'straight';
 }
 
 // Create bezier path for segment
