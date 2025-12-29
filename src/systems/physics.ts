@@ -103,11 +103,11 @@ export function updateMarble(
         PHYSICS.MAX_SPEED
       );
 
-      // Update track progress - slow enough for kids to watch and enjoy
+      // Update track progress - leisurely pace for kids to watch and enjoy
       // Use path length to determine time (longer paths take longer)
       const pathLength = segment.path.length || 200;
-      const baseTime = pathLength / 120; // ~120 pixels per second base speed
-      const SEGMENT_TIME = Math.max(1.5, Math.min(4, baseTime)); // 1.5-4 seconds per segment
+      const baseTime = pathLength / 400; // ~400 pixels per second base speed
+      const SEGMENT_TIME = Math.max(0.8, Math.min(2, baseTime)); // 0.8-2 seconds per segment
       const progressDelta = deltaTime / SEGMENT_TIME;
       updated.trackProgress = Math.min(1, updated.trackProgress + progressDelta);
 
