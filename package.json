@@ -1,0 +1,48 @@
+{
+  "name": "marblemasters",
+  "version": "1.0.0",
+  "description": "Educational marble track game for kids ages 3-10",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alarconm/marblemasters.git"
+  },
+  "keywords": [
+    "educational",
+    "game",
+    "kids",
+    "marble",
+    "pwa"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alarconm/marblemasters/issues"
+  },
+  "homepage": "https://github.com/alarconm/marblemasters#readme",
+  "dependencies": {
+    "framer-motion": "^12.23.26",
+    "howler": "^2.2.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.9"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/howler": "^2.2.12",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}

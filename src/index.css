@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-marble-red: #E53935;
+  --color-marble-blue: #1E88E5;
+  --color-marble-green: #43A047;
+  --color-marble-yellow: #FDD835;
+  --color-marble-purple: #8E24AA;
+  --color-marble-orange: #FB8C00;
+  --color-marble-pink: #EC407A;
+  --color-marble-cyan: #00ACC1;
+
+  --color-track-wood: #8B4513;
+  --color-track-wood-dark: #5D3A1A;
+  --color-track-rainbow: #FF6B6B;
+  --color-track-space: #2C3E50;
+
+  --font-family-game: 'Fredoka One', 'Comic Sans MS', cursive;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: 'Fredoka One', 'Comic Sans MS', cursive;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Prevent iOS bounce scroll */
+html {
+  position: fixed;
+  overflow: hidden;
+}
+
+/* Large touch targets for kids */
+.touch-target {
+  min-width: 60px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Marble glow effect */
+.marble-glow {
+  box-shadow:
+    inset -3px -3px 6px rgba(0, 0, 0, 0.3),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Track styling */
+.track-stroke {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Celebration particles */
+@keyframes float-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.5);
+  }
+}
+
+.particle {
+  animation: float-up 1s ease-out forwards;
+}

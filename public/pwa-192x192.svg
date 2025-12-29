@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    <radialGradient id="marble1" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#ff9999"/>
+      <stop offset="50%" style="stop-color:#e53935"/>
+      <stop offset="100%" style="stop-color:#8b1a1a"/>
+    </radialGradient>
+    <radialGradient id="marble2" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#90caf9"/>
+      <stop offset="50%" style="stop-color:#1e88e5"/>
+      <stop offset="100%" style="stop-color:#0d47a1"/>
+    </radialGradient>
+    <radialGradient id="marble3" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#a5d6a7"/>
+      <stop offset="50%" style="stop-color:#43a047"/>
+      <stop offset="100%" style="stop-color:#1b5e20"/>
+    </radialGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+  <!-- Track curve -->
+  <path d="M 30 50 Q 96 20 162 50 Q 130 100 96 120 Q 62 100 30 140"
+        fill="none" stroke="#8B4513" stroke-width="20" stroke-linecap="round"/>
+  <path d="M 30 50 Q 96 20 162 50 Q 130 100 96 120 Q 62 100 30 140"
+        fill="none" stroke="#A0522D" stroke-width="14" stroke-linecap="round"/>
+  <!-- Marbles -->
+  <circle cx="60" cy="45" r="18" fill="url(#marble1)" stroke="#5d1a1a" stroke-width="2"/>
+  <ellipse cx="52" cy="38" rx="6" ry="4" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="110" cy="80" r="18" fill="url(#marble2)" stroke="#0d47a1" stroke-width="2"/>
+  <ellipse cx="102" cy="73" rx="6" ry="4" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="70" cy="125" r="18" fill="url(#marble3)" stroke="#1b5e20" stroke-width="2"/>
+  <ellipse cx="62" cy="118" rx="6" ry="4" fill="rgba(255,255,255,0.4)"/>
+</svg>
