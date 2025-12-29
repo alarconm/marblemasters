@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
+import { StreakIndicator } from './MasteryDisplay';
 
 export function GameHUD() {
   const {
@@ -71,6 +72,11 @@ export function GameHUD() {
           {score.toLocaleString()}
         </span>
       </motion.div>
+
+      {/* Streak indicator */}
+      <AnimatePresence>
+        <StreakIndicator />
+      </AnimatePresence>
 
       {/* Pause button */}
       <motion.button

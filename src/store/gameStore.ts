@@ -12,6 +12,9 @@ import {
 import { createMarble, dropMarble } from '@/systems/physics';
 import { randomChoice } from '@/utils/mathHelpers';
 import { selectChallenge, shuffleChallengeOptions } from '@/systems/educationEngine';
+import { useParentStore } from './parentStore';
+import { recordProgress } from '@/systems/progressTracker';
+import { getStreakMultiplier } from '@/systems/difficultyEngine';
 
 // Default enabled subjects
 const defaultEnabledSubjects: Record<Subject, boolean> = {
@@ -114,7 +117,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setTheme: (theme) => set({ theme }),
 
-  startGame: (age) =>
+  startGame: (age) => {
+    // Start session tracking in parent store
+    const parentStore = useParentStore.getState();
+    parentStore.startSession();
+    parentStore.updateChildSettings(parentStore.childName, age);
+
+    // Sync enabled subjects from parent store
+    const enabledSubjects = parentStore.enabledSubjects;
+
     set({
       isPlaying: true,
       showAgeSelector: false,
@@ -124,8 +135,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       marblesDropped: 0,
       marblesCollected: 0,
       marbles: [],
+      enabledSubjects,
       nextMarbleColors: generateMarbleQueue(10),
-    }),
+    });
+  },
 
   dropNextMarble: () => {
     const state = get();
@@ -237,8 +250,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       timestamp: Date.now(),
     };
 
-    // Add bonus points for correct answer
-    const bonusPoints = correct ? 50 * state.currentChallenge.difficulty : 0;
+    // Record to parent store for persistent tracking
+    recordProgress(result);
+
+    // Calculate bonus points with streak multiplier
+    const streakMultiplier = correct ? getStreakMultiplier() : 1;
+    const baseBonus = correct ? 50 * state.currentChallenge.difficulty : 0;
+    const bonusPoints = Math.round(baseBonus * streakMultiplier);
 
     set({
       recentChallenges: [...state.recentChallenges.slice(-19), result],
@@ -282,7 +300,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   resumeGame: () => set({ isPaused: false }),
 
-  resetGame: () =>
+  resetGame: () => {
+    // End session in parent store
+    const state = get();
+    const parentStore = useParentStore.getState();
+    const correctAnswers = state.recentChallenges.filter(r => r.correct).length;
+    parentStore.endSession(
+      state.recentChallenges.length,
+      correctAnswers,
+      state.currentLevel - 1
+    );
+
     set({
       currentLevel: 1,
       score: 0,
@@ -294,6 +322,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isPaused: false,
       showCelebration: false,
       showAgeSelector: true,
+      recentChallenges: [],
       nextMarbleColors: generateMarbleQueue(10),
-    }),
+    });
+  },
 }));
