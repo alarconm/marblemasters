@@ -182,22 +182,28 @@ function checkTrackCollision(
   marble: Marble,
   track: TrackSegment[]
 ): TrackSegment | null {
-  for (const segment of track) {
-    // Check if marble is near the track entry point
+  // Sort segments by entry point Y to check from top to bottom
+  const sortedSegments = [...track].sort((a, b) => a.entryPoint.y - b.entryPoint.y);
+
+  for (const segment of sortedSegments) {
+    // Expanded collision detection for entry point
     const entryDist = distanceBetween(marble.position, segment.entryPoint);
-    if (entryDist < segment.width / 2 + PHYSICS.MARBLE_RADIUS) {
-      // Check if marble is moving in the right direction (downward)
-      if (marble.velocity.y > 0) {
+    const collisionRadius = segment.width / 2 + PHYSICS.MARBLE_RADIUS * 2;
+
+    // Check if marble is near the track entry point (generous detection)
+    if (entryDist < collisionRadius) {
+      // Check if marble is moving downward and below or at the entry
+      if (marble.velocity.y > 0 && marble.position.y >= segment.entryPoint.y - PHYSICS.MARBLE_RADIUS * 2) {
         return segment;
       }
     }
 
-    // Check if marble intersects with the track path
-    // Sample the path and check distance to marble
-    for (let t = 0; t < 1; t += 0.1) {
+    // Check if marble intersects with the track path (more samples for accuracy)
+    for (let t = 0; t <= 1; t += 0.05) {
       const pathPoint = getPointOnPath(segment.path, t);
       const dist = distanceBetween(marble.position, pathPoint);
-      if (dist < segment.width / 2 + PHYSICS.MARBLE_RADIUS * 0.5) {
+      // More generous collision detection
+      if (dist < segment.width / 2 + PHYSICS.MARBLE_RADIUS) {
         return segment;
       }
     }

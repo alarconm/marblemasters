@@ -43,7 +43,7 @@ export function GameCanvas() {
         difficulty: 1,
       });
 
-      setTrack(generated.track, generated.buckets);
+      setTrack(generated.track, generated.buckets, generated.launcherPosition);
     }
   }, [isPlaying, track.length, theme, setTrack]);
 
@@ -60,7 +60,7 @@ export function GameCanvas() {
         difficulty: 1,
       });
 
-      setTrack(generated.track, generated.buckets);
+      setTrack(generated.track, generated.buckets, generated.launcherPosition);
     }
   }, [theme]);
 

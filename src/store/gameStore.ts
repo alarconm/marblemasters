@@ -61,7 +61,7 @@ interface GameStore {
   nextMarbleColors: MarbleColor[];
 
   // Actions
-  setTrack: (track: TrackSegment[], buckets: Bucket[]) => void;
+  setTrack: (track: TrackSegment[], buckets: Bucket[], launcherPosition?: { x: number; y: number }) => void;
   setTheme: (theme: TrackTheme) => void;
   startGame: (age: number) => void;
   dropNextMarble: () => void;
@@ -113,7 +113,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   nextMarbleColors: generateMarbleQueue(10),
 
   // Actions
-  setTrack: (track, buckets) => set({ track, buckets }),
+  setTrack: (track, buckets, launcherPosition) => set({
+    track,
+    buckets,
+    ...(launcherPosition && { launcherPosition }),
+  }),
 
   setTheme: (theme) => set({ theme }),
 

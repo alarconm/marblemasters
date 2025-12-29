@@ -126,7 +126,7 @@ export function getPointOnPath(path: BezierPath, t: number): Vector2 {
 
   return {
     x: cubicBezier(localT, p0.x, p1.x, p2.x, p3.x),
-    y: cubicBezier(localT, p0.y, p0.y + (p1.y - p0.y), p2.y, p3.y),
+    y: cubicBezier(localT, p0.y, p1.y, p2.y, p3.y),
   };
 }
 
